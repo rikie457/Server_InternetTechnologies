@@ -8,11 +8,13 @@ import java.util.ArrayList;
 public class Server implements Runnable {
 
     public ArrayList<ClientThread> threads;
+    public ArrayList<Group> groups = new ArrayList<>();
 
     private static final int PORT = 1337;
 
     public Server() {
         this.threads = new ArrayList<>();
+        this.groups.add(new Group("Main"));
     }
 
     @Override
@@ -24,6 +26,8 @@ public class Server implements Runnable {
                 Socket socket = serverSocket.accept();
                 ClientThread ct = new ClientThread(socket, this);
                 threads.add(ct);
+                this.groups.get(0).addMember(ct);
+
                 (new Thread(ct)).start();
             }
         } catch (IOException e) {

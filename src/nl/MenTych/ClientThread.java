@@ -12,6 +12,7 @@ public class ClientThread implements Runnable {
     String username;
     Server server;
     boolean pongRecieved = true;
+    private Group group;
 
     public ClientThread(Socket socket, Server server) {
         this.socket = socket;
@@ -61,13 +62,26 @@ public class ClientThread implements Runnable {
                             if (line.length() > 0) {
                                 for (ClientThread ct : server.threads) {
                                     // echo if message sender is self
-                                    System.out.println(ct != this);
+                                    System.out.println(ct == this);
                                     if (ct == this) {
                                         server.sendMessage(this, "BCST [" + username + "] " + line.replaceAll("[*BCST $]", ""));
                                     }
                                 }
                                 send("+OK " + line);
                             }
+                            break;
+                            
+                        case "CLIENTLIST":
+                            System.out.println(group.getConnectedUsernames());
+                            send("+OK CLIENTLIST " + group.getConnectedUsernames());
+                            break;
+
+                        case "QUIT":
+                            pingThread.stop();
+                            socket.close();
+                            System.out.println("User disconnected: " + this.username);
+                            this.server.threads.remove(this);
+                            this.group.removeMember(this);
                             break;
 
                         default:
@@ -81,6 +95,7 @@ public class ClientThread implements Runnable {
                     pingThread.stop();
                     socket.close();
                     this.server.threads.remove(this);
+                    this.group.removeMember(this);
                     break;
                 } catch (IOException e1) {
 
@@ -95,4 +110,7 @@ public class ClientThread implements Runnable {
         out.flush();
     }
 
+    public void setGroup(Group group) {
+        this.group = group;
+    }
 }
