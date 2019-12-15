@@ -8,7 +8,7 @@ public class ClientThread implements Runnable {
     Socket socket;
     PrintWriter out;
     private BufferedReader reader;
-    private String username;
+    String username;
     private Server server;
     private States state;
     boolean pongRecieved = true;
@@ -22,6 +22,7 @@ public class ClientThread implements Runnable {
     @Override
     public void run() {
         this.state = States.CONNECTING;
+
         try {
             InputStream input = socket.getInputStream();
             out = new PrintWriter(socket.getOutputStream());
@@ -30,8 +31,7 @@ public class ClientThread implements Runnable {
             e.printStackTrace();
         }
 
-
-        System.out.println("New client connected");
+        send("HELO Welkom to WhatsUpp!");
         Thread pingThread = new Thread(new PingThread(this));
         pingThread.start();
 
@@ -55,6 +55,7 @@ public class ClientThread implements Runnable {
                             }
 
                             boolean userexists = false;
+
                             for (ClientThread ct : server.threads) {
                                 if (ct != this && username.equals(ct.username)) {
                                     userexists = true;
@@ -68,7 +69,7 @@ public class ClientThread implements Runnable {
                             }
 
                             this.state = States.CONNECTED;
-                            send("+OK HELO");
+                            send("+OK HELO " + username);
                             break;
 
                         // User responded with pong.
@@ -111,7 +112,7 @@ public class ClientThread implements Runnable {
                     }
                 }
             } catch (IOException e) {
-                kill(pingThread);
+              break;
             }
         }
         kill(pingThread);
