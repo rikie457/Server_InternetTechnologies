@@ -6,11 +6,11 @@ import java.net.Socket;
 public class ClientThread implements Runnable {
 
     Socket socket;
-    InputStream input;
     PrintWriter out;
-    BufferedReader reader;
-    String username;
-    Server server;
+    private BufferedReader reader;
+    private String username;
+    private Server server;
+    private States state;
     boolean pongRecieved = true;
     private Group group;
 
@@ -21,10 +21,9 @@ public class ClientThread implements Runnable {
 
     @Override
     public void run() {
-
-
+        this.state = States.CONNECTING;
         try {
-            input = socket.getInputStream();
+            InputStream input = socket.getInputStream();
             out = new PrintWriter(socket.getOutputStream());
             reader = new BufferedReader(new InputStreamReader(input));
         } catch (IOException e) {
@@ -36,7 +35,7 @@ public class ClientThread implements Runnable {
         Thread pingThread = new Thread(new PingThread(this));
         pingThread.start();
 
-        while (true) {
+        while (!this.state.equals(States.FINISHED)) {
             try {
                 String line = this.reader.readLine();
 
@@ -44,17 +43,37 @@ public class ClientThread implements Runnable {
                     String[] splits = line.split("\\s+");
 
                     switch (splits[0]) {
-
                         // New user connects
                         case "HELO":
                             username = splits[1];
+                            boolean validname = username.matches("[a-zA-Z0-9_]{3,14}");
+
+                            if (!validname) {
+                                this.state = States.FINISHED;
+                                send("-ERR username has an invalid format (only characters, numbers and underscores are allowed");
+                                continue;
+                            }
+
+                            boolean userexists = false;
+                            for (ClientThread ct : server.threads) {
+                                if (ct != this && username.equals(ct.username)) {
+                                    userexists = true;
+                                    break;
+                                }
+                            }
+
+                            if (userexists) {
+                                send("-ERR user already logged in");
+                                continue;
+                            }
+
+                            this.state = States.CONNECTED;
                             send("+OK HELO");
                             break;
 
                         // User responded with pong.
                         case "PONG":
                             this.pongRecieved = true;
-                            //System.out.println("PONG " + username);
                             break;
 
                         // user sends message
@@ -70,13 +89,14 @@ public class ClientThread implements Runnable {
                                 send("+OK " + line);
                             }
                             break;
-                            
+
                         case "CLIENTLIST":
                             System.out.println(group.getConnectedUsernames());
                             send("+OK CLIENTLIST " + group.getConnectedUsernames());
                             break;
 
                         case "QUIT":
+                            send("+OK Goodbye");
                             pingThread.stop();
                             socket.close();
                             System.out.println("User disconnected: " + this.username);
@@ -91,18 +111,10 @@ public class ClientThread implements Runnable {
                     }
                 }
             } catch (IOException e) {
-                try {
-                    pingThread.stop();
-                    socket.close();
-                    this.server.threads.remove(this);
-                    this.group.removeMember(this);
-                    break;
-                } catch (IOException e1) {
-
-                    e1.printStackTrace();
-                }
+                kill(pingThread);
             }
         }
+        kill(pingThread);
     }
 
     public void send(String message) {
@@ -110,7 +122,20 @@ public class ClientThread implements Runnable {
         out.flush();
     }
 
-    public void setGroup(Group group) {
-        this.group = group;
+        public void setGroup(Group group) {
+            this.group = group;
+        }
+
+    public void kill(Thread pt) {
+        try {
+            pt.stop();
+            System.out.println("[DROP CONNECTION] " + this.username);
+            server.threads.remove(this);
+            this.socket.close();
+        } catch (Exception ex) {
+            System.out.println("Exception when closing outputstream: " + ex.getMessage());
+        }
+        this.state = States.FINISHED;
     }
+
 }
