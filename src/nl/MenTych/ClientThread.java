@@ -38,28 +38,38 @@ public class ClientThread implements Runnable {
         while (true) {
             try {
                 String line = this.reader.readLine();
+
                 if (line != null) {
                     String[] splits = line.split("\\s+");
+
                     switch (splits[0]) {
+
+                        // New user connects
                         case "HELO":
                             username = splits[1];
                             send("+OK HELO");
                             break;
+
+                        // User responded with pong.
                         case "PONG":
                             this.pongRecieved = true;
-                            System.out.println("PONG " + username);
+                            //System.out.println("PONG " + username);
                             break;
+
+                        // user sends message
                         case "BCST":
                             if (line.length() > 0) {
                                 for (ClientThread ct : server.threads) {
+                                    // echo if message sender is self
                                     System.out.println(ct != this);
-                                    if (ct != this) {
-                                        send("BCST [" + username + "] " + line.substring(splits.length + 1));
+                                    if (ct == this) {
+                                        server.sendMessage(this, "BCST [" + username + "] " + line.replaceAll("[*BCST $]", ""));
                                     }
                                 }
                                 send("+OK " + line);
                             }
                             break;
+
                         default:
                             System.out.println(line);
                             System.out.println("UNKOWN!");
