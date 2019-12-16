@@ -41,7 +41,7 @@ public class ClientThread implements Runnable {
 
                 if (line != null) {
                     String[] splits = line.split("\\s+");
-
+                    System.out.println(splits[0]);
                     switch (splits[0]) {
 
                         // New user connects
@@ -75,7 +75,6 @@ public class ClientThread implements Runnable {
                             break;
 
                         case "VERSION":
-                            System.out.println("VERSION");
                             send("+VERSION 2");
                             break;
 
@@ -101,6 +100,11 @@ public class ClientThread implements Runnable {
                         case "CLIENTLIST":
                             System.out.println(group.getConnectedUsernames());
                             send("+OK CLIENTLIST " + group.getConnectedUsernames());
+                            break;
+
+                            case "CLIENTLIST-DM":
+                            System.out.println(group.getConnectedUsernames());
+                            send("+OK CLIENTLIST-DM " + group.getConnectedUsernames());
                             break;
 
                         case "QUIT":
@@ -130,7 +134,7 @@ public class ClientThread implements Runnable {
         out.flush();
     }
 
-        public void setGroup(Group group) {
+    public void setGroup(Group group) {
             this.group = group;
         }
 
