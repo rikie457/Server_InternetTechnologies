@@ -3,12 +3,13 @@ package nl.MenTych;
 import java.util.ArrayList;
 
 public class Group {
-    public String name;
+    public String name, owner;
 
     private ArrayList<ClientThread> members = new ArrayList<>();
 
-    public Group(String name) {
+    public Group(String name, String owner) {
         this.name = name;
+        this.owner = owner;
     }
 
     public ArrayList<ClientThread> getMembers() {

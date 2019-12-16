@@ -13,6 +13,7 @@ public class ClientThread implements Runnable {
     private States state;
     boolean pongRecieved = true;
     private Group group;
+    int activegroup;
 
     public ClientThread(Socket socket, Server server) {
         this.socket = socket;
@@ -36,14 +37,17 @@ public class ClientThread implements Runnable {
         pingThread.start();
 
         while (!this.state.equals(States.FINISHED)) {
+
             try {
                 String line = this.reader.readLine();
 
                 if (line != null) {
                     String[] splits = line.split("\\s+");
-                    System.out.println(splits[0]);
-                    switch (splits[0]) {
+                    if(!splits[0].equals("PONG")) {
+                        System.out.println(line);
+                    }
 
+                    switch (splits[0]) {
                         // New user connects
                         case "HELO":
                             username = splits[1];
@@ -69,9 +73,12 @@ public class ClientThread implements Runnable {
                                 send("-ERR user already logged in");
                                 continue;
                             }
+                            this.group = server.groups.get(0);
+                            this.group.addMember(this);
 
-                            this.state = States.CONNECTED;
                             send("+OK HELO " + username);
+                            send("+OK GROUPJOIN " + this.group.name);
+                            this.state = States.CONNECTED;
                             break;
 
                         case "VERSION":
@@ -87,16 +94,15 @@ public class ClientThread implements Runnable {
                         case "BCST":
                             if (line.length() > 0) {
                                 for (ClientThread ct : server.threads) {
-                                    // echo if message sender is self
-                                    System.out.println(ct == this);
                                     if (ct == this) {
-                                        server.sendMessage(this, "BCST [" + username + "] " + line.replaceAll("[*BCST $]", ""));
+                                        server.sendMessage(this, activegroup, "BCST [" + username + "] " + line.replaceAll("[*BCST $]", ""));
                                     }
+
                                 }
                                 send("+OK " + line);
                             }
                             break;
-                            
+
                         case "CLIENTLIST":
                             System.out.println(group.getConnectedUsernames());
                             send("+OK CLIENTLIST " + group.getConnectedUsernames());
@@ -105,6 +111,97 @@ public class ClientThread implements Runnable {
                             case "CLIENTLIST-DM":
                             System.out.println(group.getConnectedUsernames());
                             send("+OK CLIENTLIST-DM " + group.getConnectedUsernames());
+                            break;
+
+                        case "GROUPCREATE":
+                            String owner = splits[1];
+                            String name = splits[2];
+                            boolean exists = false;
+
+                            for (int i = 0; i < server.groups.size(); i++) {
+                                Group g = server.groups.get(i);
+                                if (g.name.equals(name)) {
+                                    exists = true;
+                                }
+                            }
+                            if(!exists) {
+                                Group group = new Group(name, owner);
+                                server.groups.add(group);
+                                for (int i = 0; i < server.groups.size(); i++) {
+                                    Group g = server.groups.get(i);
+                                    if (g.name.equals(name)) {
+                                        this.activegroup = i;
+                                    }
+                                }
+                                server.groups.get(0).removeMember(this);
+                                group.addMember(this);
+                                send("+OK GROUPCREATE " + group.name);
+                            }else{
+                                send("-ERR GROUPEXISTS");
+                            }
+                            break;
+
+                        case "GROUPLIST":
+
+                            break;
+
+                        case "GROUPREMOVE":
+                            String remove = splits[1];
+                            String askinguser = splits[2];
+                            boolean removeexists = false;
+                            int indextoremove = 0;
+                            Group grouptoremove = null;
+
+                            for (int i = 0; i < server.groups.size(); i++) {
+                                Group g = server.groups.get(i);
+                                if (g.name.equals(remove)) {
+                                    removeexists = true;
+                                    grouptoremove = g;
+                                    indextoremove = i;
+                                }
+                            }
+                            if(removeexists) {
+                                if(grouptoremove.owner.equals(askinguser)){
+                                    for(ClientThread ct : server.threads){
+                                        Group newgroup = server.groups.get(0);
+                                        System.out.println(activegroup);
+                                        System.out.println(indextoremove);
+                                        if(ct.activegroup == indextoremove){
+                                            server.sendMessage(this, activegroup, "+OK GROUPREMOVED");
+                                            ct.activegroup = 0;
+                                            ct.group = newgroup;
+                                        }
+                                    }
+                                    server.groups.remove(grouptoremove);
+                                }else{
+                                    send("-ERR NOTOWNER");
+                                }
+                            }else{
+                                send("-ERR GROUPEXISTS");
+                            }
+                            break;
+
+                        case "GROUPJOIN":
+                            String groupname = splits[1];
+                            int newindex = 0;
+                            boolean isgroup = false;
+                            for (int i = 0; i < server.groups.size(); i++) {
+                                Group g = server.groups.get(i);
+                                if (g.name.equals(groupname)) {
+                                    isgroup = true;
+                                    newindex = i;
+                                }
+                            }
+
+                            if (isgroup) {
+                                server.groups.get(this.activegroup).removeMember(this);
+                                this.group = server.groups.get(newindex);
+                                this.activegroup = newindex;
+                                this.group.addMember(this);
+                                send("+OK GROUPJOIN " + groupname);
+                            }else{
+                                send("-ERR NOSUCHGROUP");
+                            }
                             break;
 
                         case "QUIT":
@@ -123,13 +220,14 @@ public class ClientThread implements Runnable {
                     }
                 }
             } catch (IOException e) {
-              break;
+                break;
             }
         }
         kill(pingThread);
     }
 
     public void send(String message) {
+        System.out.println(message);
         out.println(message);
         out.flush();
     }

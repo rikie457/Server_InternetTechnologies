@@ -14,7 +14,7 @@ public class Server implements Runnable {
 
     public Server() {
         this.threads = new ArrayList<>();
-        this.groups.add(new Group("Main"));
+        this.groups.add(new Group("Main", "#NULL"));
     }
 
     @Override
@@ -26,8 +26,6 @@ public class Server implements Runnable {
                 Socket socket = serverSocket.accept();
                 ClientThread ct = new ClientThread(socket, this);
                 threads.add(ct);
-                this.groups.get(0).addMember(ct);
-
                 (new Thread(ct)).start();
             }
         } catch (IOException e) {
@@ -35,9 +33,9 @@ public class Server implements Runnable {
         }
     }
 
-    public void sendMessage(ClientThread sender, String message) {
+    public void sendMessage(ClientThread sender, int group, String message) {
         for (ClientThread thread : threads) {
-            if (thread != sender) {
+            if (thread != sender && thread.activegroup == group) {
                 thread.send(message);
             }
         }
