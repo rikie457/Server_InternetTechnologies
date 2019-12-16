@@ -43,6 +43,7 @@ public class ClientThread implements Runnable {
                     String[] splits = line.split("\\s+");
 
                     switch (splits[0]) {
+
                         // New user connects
                         case "HELO":
                             username = splits[1];
@@ -64,12 +65,18 @@ public class ClientThread implements Runnable {
                             }
 
                             if (userexists) {
+                                this.state = States.FINISHED;
                                 send("-ERR user already logged in");
                                 continue;
                             }
 
                             this.state = States.CONNECTED;
                             send("+OK HELO " + username);
+                            break;
+
+                        case "VERSION":
+                            System.out.println("VERSION");
+                            send("+VERSION 2");
                             break;
 
                         // User responded with pong.
@@ -90,7 +97,7 @@ public class ClientThread implements Runnable {
                                 send("+OK " + line);
                             }
                             break;
-
+                            
                         case "CLIENTLIST":
                             System.out.println(group.getConnectedUsernames());
                             send("+OK CLIENTLIST " + group.getConnectedUsernames());
@@ -132,6 +139,7 @@ public class ClientThread implements Runnable {
             pt.stop();
             System.out.println("[DROP CONNECTION] " + this.username);
             server.threads.remove(this);
+            this.group.removeMember(this);
             this.socket.close();
         } catch (Exception ex) {
             System.out.println("Exception when closing outputstream: " + ex.getMessage());
@@ -139,4 +147,7 @@ public class ClientThread implements Runnable {
         this.state = States.FINISHED;
     }
 
+    public String getUsername() {
+        return username;
+    }
 }
