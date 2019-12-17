@@ -19,7 +19,7 @@ public class Group {
     public String getConnectedUsernames() {
         StringBuilder usernames = new StringBuilder();
         for (ClientThread member : members) {
-            usernames.append(member.getUsername()).append(", ");
+            usernames.append(member.getUsername()).append(",");
         }
         return usernames.toString();
     }

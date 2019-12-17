@@ -103,11 +103,6 @@ public class ClientThread implements Runnable {
                                     message.append(" ");
                                 }
 
-                                System.out.println("\nMessage recieved from: " + sender);
-                                System.out.println("Message send to: " + reciever.username);
-                                System.out.println("Message: " + message);
-                                System.out.println("\n");
-
                                 reciever.sendDM(sender, message.toString());
 
                             } catch (ClientNotFoundException e) {
@@ -144,6 +139,11 @@ public class ClientThread implements Runnable {
                             send("+OK CLIENTLIST-DM " + group.getConnectedUsernames());
                             break;
 
+                        case "CLIENTLIST-GROUP":
+                            System.out.println(group.getConnectedUsernames());
+                            send("+OK CLIENTLIST-GROUP " + group.getConnectedUsernames());
+                            break;
+
                         case "GROUPCREATE":
                             String owner = splits[1];
                             String name = splits[2];
@@ -172,8 +172,18 @@ public class ClientThread implements Runnable {
                             }
                             break;
 
-                        case "GROUPLIST":
+                        case "KICK":
+                            try {
+                                this.group.removeMember(this.server.getClientThreadByName(splits[1]));
+                                this.server.getClientThreadByName(splits[1]).send("+OK GROUPKICK");
+                            } catch (ClientNotFoundException e) {
+                                e.printStackTrace();
+                            }
+                            break;
 
+                        case "LEAVEGROUP":
+                            this.group.removeMember(this);
+                            this.send("+OK GROUPLEAVE");
                             break;
 
                         case "GROUPREMOVE":
