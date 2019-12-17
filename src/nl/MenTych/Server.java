@@ -40,4 +40,13 @@ public class Server implements Runnable {
             }
         }
     }
+
+    public ClientThread getClientThreadByName(String name) throws ClientNotFoundException {
+        for (ClientThread t : threads) {
+            if (t.username.equals(name)) {
+                return t;
+            }
+        }
+        throw new ClientNotFoundException(name, this.threads);
+    }
 }

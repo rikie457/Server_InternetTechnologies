@@ -2,6 +2,7 @@ package nl.MenTych;
 
 import java.io.*;
 import java.net.Socket;
+import java.util.Arrays;
 
 public class ClientThread implements Runnable {
 
@@ -43,7 +44,7 @@ public class ClientThread implements Runnable {
 
                 if (line != null) {
                     String[] splits = line.split("\\s+");
-                    if(!splits[0].equals("PONG")) {
+                    if (!splits[0].equals("PONG")) {
                         System.out.println(line);
                     }
 
@@ -85,6 +86,36 @@ public class ClientThread implements Runnable {
                             send("+VERSION 2");
                             break;
 
+                        case "DM":
+                            // splits 0 to 2 are used for identifying.
+                            // 0 = DM identifier
+                            // 1 = reciever username
+                            // 2 = sender username
+                            System.out.println(Arrays.toString(splits));
+
+                            try {
+                                ClientThread reciever = this.server.getClientThreadByName(splits[1]);
+                                String sender = splits[2];
+
+                                StringBuilder message = new StringBuilder();
+                                for (int i = 3; i < splits.length; i++) {
+                                    message.append(splits[i]);
+                                    message.append(" ");
+                                }
+
+                                System.out.println("\nMessage recieved from: " + sender);
+                                System.out.println("Message send to: " + reciever.username);
+                                System.out.println("Message: " + message);
+                                System.out.println("\n");
+
+                                reciever.sendDM(sender, message.toString());
+
+                            } catch (ClientNotFoundException e) {
+                                e.printStackTrace();
+                            }
+
+                            break;
+
                         // User responded with pong.
                         case "PONG":
                             this.pongRecieved = true;
@@ -95,7 +126,7 @@ public class ClientThread implements Runnable {
                             if (line.length() > 0) {
                                 for (ClientThread ct : server.threads) {
                                     if (ct == this) {
-                                        server.sendMessage(this, activegroup, "BCST [" + username + "] " + line.replaceAll("[*BCST $]", ""));
+                                        server.sendMessage(this, activegroup, "BCST [" + username + "] " + line.replaceAll("[*BCST$]", ""));
                                     }
 
                                 }
@@ -108,7 +139,7 @@ public class ClientThread implements Runnable {
                             send("+OK CLIENTLIST " + group.getConnectedUsernames());
                             break;
 
-                            case "CLIENTLIST-DM":
+                        case "CLIENTLIST-DM":
                             System.out.println(group.getConnectedUsernames());
                             send("+OK CLIENTLIST-DM " + group.getConnectedUsernames());
                             break;
@@ -124,7 +155,7 @@ public class ClientThread implements Runnable {
                                     exists = true;
                                 }
                             }
-                            if(!exists) {
+                            if (!exists) {
                                 Group group = new Group(name, owner);
                                 server.groups.add(group);
                                 for (int i = 0; i < server.groups.size(); i++) {
@@ -136,7 +167,7 @@ public class ClientThread implements Runnable {
                                 server.groups.get(0).removeMember(this);
                                 group.addMember(this);
                                 send("+OK GROUPCREATE " + group.name);
-                            }else{
+                            } else {
                                 send("-ERR GROUPEXISTS");
                             }
                             break;
@@ -160,23 +191,23 @@ public class ClientThread implements Runnable {
                                     indextoremove = i;
                                 }
                             }
-                            if(removeexists) {
-                                if(grouptoremove.owner.equals(askinguser)){
-                                    for(ClientThread ct : server.threads){
+                            if (removeexists) {
+                                if (grouptoremove.owner.equals(askinguser)) {
+                                    for (ClientThread ct : server.threads) {
                                         Group newgroup = server.groups.get(0);
                                         System.out.println(activegroup);
                                         System.out.println(indextoremove);
-                                        if(ct.activegroup == indextoremove){
+                                        if (ct.activegroup == indextoremove) {
                                             server.sendMessage(this, activegroup, "+OK GROUPREMOVED");
                                             ct.activegroup = 0;
                                             ct.group = newgroup;
                                         }
                                     }
                                     server.groups.remove(grouptoremove);
-                                }else{
+                                } else {
                                     send("-ERR NOTOWNER");
                                 }
-                            }else{
+                            } else {
                                 send("-ERR GROUPEXISTS");
                             }
                             break;
@@ -199,7 +230,7 @@ public class ClientThread implements Runnable {
                                 this.activegroup = newindex;
                                 this.group.addMember(this);
                                 send("+OK GROUPJOIN " + groupname);
-                            }else{
+                            } else {
                                 send("-ERR NOSUCHGROUP");
                             }
                             break;
@@ -226,15 +257,19 @@ public class ClientThread implements Runnable {
         kill(pingThread);
     }
 
+    private void sendDM(String sender, String message) {
+        this.send("+DM" + ' ' + sender + ' ' + message);
+    }
+
     public void send(String message) {
-        System.out.println(message);
+        System.out.println("SEND: " + message);
         out.println(message);
         out.flush();
     }
 
     public void setGroup(Group group) {
-            this.group = group;
-        }
+        this.group = group;
+    }
 
     public void kill(Thread pt) {
         try {
