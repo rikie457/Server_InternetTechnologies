@@ -17,16 +17,18 @@ public class PingThread implements Runnable {
     public void run() {
         while (true) {
             try {
-                Thread.sleep(2000);
-                out.println("PING");
-                out.flush();
-
-                Thread.sleep(3000);
-                if (!ct.pongRecieved) {
-                    out.println("DSCN Pong timeout");
+                if (!ct.sendingFile) {
+                    Thread.sleep(2000);
+                    out.println("PING");
                     out.flush();
-                    //Maybe remove thread?
-                    this.ct.socket.close();
+                    System.out.println("SENDING PING");
+                    Thread.sleep(3000);
+                    if (!ct.pongRecieved ) {
+                        out.println("DSCN Pong timeout");
+                        out.flush();
+                        //Maybe remove thread?
+                        this.ct.socket.close();
+                    }
                 }
 
                 ct.pongRecieved = false;

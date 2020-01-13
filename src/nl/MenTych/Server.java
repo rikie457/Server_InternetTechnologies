@@ -33,7 +33,7 @@ public class Server implements Runnable {
         }
     }
 
-    public void sendMessage(ClientThread sender, int group, String message) {
+    public void sendMessageButNotToSender(ClientThread sender, int group, String message) {
         for (ClientThread thread : threads) {
             if (thread != sender && thread.activegroup == group) {
                 thread.send(message);
@@ -48,5 +48,13 @@ public class Server implements Runnable {
             }
         }
         throw new ClientNotFoundException(name, this.threads);
+    }
+
+    public void sendMessageToAll(int group, String message) {
+        for (ClientThread thread : threads) {
+            if(thread.activegroup == group) {
+                thread.send(message);
+            }
+        }
     }
 }

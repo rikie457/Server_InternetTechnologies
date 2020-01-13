@@ -12,7 +12,7 @@ public class ClientThread implements Runnable {
     String username;
     private Server server;
     private States state;
-    boolean pongRecieved = true;
+    boolean pongRecieved = true, sendingFile = false;
     private Group group;
     int activegroup;
 
@@ -42,12 +42,8 @@ public class ClientThread implements Runnable {
             try {
                 String line = this.reader.readLine();
 
-                if (line != null) {
+                if (line != null && !sendingFile) {
                     String[] splits = line.split("\\s+");
-                    if (!splits[0].equals("PONG")) {
-                        System.out.println(line);
-                    }
-
                     switch (splits[0]) {
                         // New user connects
                         case "HELO":
@@ -121,7 +117,7 @@ public class ClientThread implements Runnable {
                             if (line.length() > 0) {
                                 for (ClientThread ct : server.threads) {
                                     if (ct == this) {
-                                        server.sendMessage(this, activegroup, "BCST [" + username + "] " + line.replaceAll("[*BCST$]", ""));
+                                        server.sendMessageButNotToSender(this, activegroup, "BCST [" + username + "] " + line.replaceAll("BCST ", ""));
                                     }
 
                                 }
@@ -207,8 +203,8 @@ public class ClientThread implements Runnable {
                                         Group newgroup = server.groups.get(0);
                                         System.out.println(activegroup);
                                         System.out.println(indextoremove);
-                                        if (ct.activegroup == indextoremove) {
-                                            server.sendMessage(this, activegroup, "+OK GROUPREMOVED");
+                                        if (ct.activegroup == indextoremove && ct != this) {
+                                            server.sendMessageToAll(activegroup, "+OK GROUPREMOVED");
                                             ct.activegroup = 0;
                                             ct.group = newgroup;
                                         }
@@ -244,7 +240,6 @@ public class ClientThread implements Runnable {
                                 send("-ERR NOSUCHGROUP");
                             }
                             break;
-
                         case "QUIT":
                             send("+OK Goodbye");
                             pingThread.stop();
@@ -256,18 +251,22 @@ public class ClientThread implements Runnable {
 
                         case "NEWFILE":
                             send("+OK NEWFILE");
-                            int bytesRead = 0;
-                            DataInputStream clientData = new DataInputStream(socket.getInputStream());
+                            sendingFile = true;
+                            DataInputStream dis = new DataInputStream(socket.getInputStream());
+                            FileOutputStream fos = new FileOutputStream("files/testfile.jpg");
+                            byte[] buffer = new byte[4096];
 
-                            String fileName = clientData.readUTF();
-                            OutputStream output = new FileOutputStream(fileName);
-                            long size = clientData.readLong();
-                            byte[] buffer = new byte[1024];
-                            while (size > 0 && (bytesRead = clientData.read(buffer, 0, (int)Math.min(buffer.length, size))) != -1)
-                            {
-                                output.write(buffer, 0, bytesRead);
-                                size -= bytesRead;
+                            int filesize = 789779; // Send file size in separate msg
+                            int read = 0;
+                            int totalRead = 0;
+                            int remaining = filesize;
+                            while((read = dis.read(buffer, 0, Math.min(buffer.length, remaining))) > 0) {
+                                totalRead += read;
+                                remaining -= read;
+                                System.out.println("read " + totalRead + " bytes.");
+                                fos.write(buffer, 0, read);
                             }
+                            sendingFile = false;
                             break;
 
                         default:
@@ -277,6 +276,7 @@ public class ClientThread implements Runnable {
                     }
                 }
             } catch (IOException e) {
+                e.printStackTrace();
                 break;
             }
         }
@@ -288,7 +288,7 @@ public class ClientThread implements Runnable {
     }
 
     public void send(String message) {
-        System.out.println("SEND: " + message);
+        System.out.println(message);
         out.println(message);
         out.flush();
     }
@@ -300,7 +300,7 @@ public class ClientThread implements Runnable {
     public void kill(Thread pt) {
         try {
             pt.stop();
-            System.out.println("[DROP CONNECTION] " + this.username);
+            System.out.println("DROPPED CONNECTION " + this.username);
             server.threads.remove(this);
             this.group.removeMember(this);
             this.socket.close();
