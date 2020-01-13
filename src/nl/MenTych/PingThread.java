@@ -1,12 +1,13 @@
 package nl.MenTych;
 
+import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.PrintWriter;
 
 public class PingThread implements Runnable {
 
     private ClientThread ct;
-    private PrintWriter out;
+    private DataOutputStream out;
 
     public PingThread(ClientThread ct) {
         this.ct = ct;
@@ -19,13 +20,11 @@ public class PingThread implements Runnable {
             try {
                 if (!ct.sendingFile) {
                     Thread.sleep(2000);
-                    out.println("PING");
-                    out.flush();
+                    send("PING");
                     System.out.println("SENDING PING");
                     Thread.sleep(3000);
                     if (!ct.pongRecieved ) {
-                        out.println("DSCN Pong timeout");
-                        out.flush();
+                       send("DSCN Pong timeout");
                         //Maybe remove thread?
                         this.ct.socket.close();
                     }
@@ -35,6 +34,15 @@ public class PingThread implements Runnable {
             } catch (InterruptedException | IOException e) {
                 e.printStackTrace();
             }
+        }
+    }
+    public void send(String message) {
+        try {
+            System.out.println(message);
+            out.writeUTF(message);
+            out.flush();
+        } catch (Exception e) {
+            e.getStackTrace();
         }
     }
 }
