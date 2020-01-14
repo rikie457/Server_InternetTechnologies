@@ -54,7 +54,6 @@ public class ClientRecieveFileThread implements Runnable {
 
 
     void kill() throws IOException {
-        socket.close();
         System.out.println("KILLING CLIENTFILETHREAD");
         Thread.currentThread().stop();
     }

@@ -56,11 +56,6 @@ public class ClientSentFileThread implements Runnable {
 
 
     void kill() {
-        try {
-            socket.close();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
         System.out.println("KILLING CLIENTFILESENDTHREAD");
         Thread.currentThread().stop();
     }

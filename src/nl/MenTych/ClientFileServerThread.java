@@ -9,6 +9,7 @@ public class ClientFileServerThread implements Runnable {
     ClientRecieveFileThread clientRecieveThread;
     ClientThread reciever;
     String filename;
+    ServerSocket serverSocket;
     int connected = 0;
 
     public ClientFileServerThread(ClientThread reciever) {
@@ -23,7 +24,8 @@ public class ClientFileServerThread implements Runnable {
     public void run() {
         int PORT = Server.PORT + 1;
         System.out.println(PORT);
-        try (ServerSocket serverSocket = new ServerSocket(PORT)) {
+        try {
+            serverSocket = new ServerSocket(PORT);
             System.out.println("Started filetransfer on port: " + PORT);
             System.out.println(reciever);
             System.out.println(filename);
@@ -55,6 +57,11 @@ public class ClientFileServerThread implements Runnable {
     }
 
     void kill() {
+        try {
+            serverSocket.close();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
         System.out.println("KILLING CLIENTFILESERVERTHREAD");
         Thread.currentThread().stop();
     }
