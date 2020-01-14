@@ -37,7 +37,7 @@ public class ClientThread implements Runnable {
         } catch (IOException e) {
             e.printStackTrace();
         }
-        this.util = new Util(out);
+        this.util = new Util(out, this);
         util.send("HELO Welkom to WhatsUpp!");
         Thread pingThread = new Thread(new PingThread(this, util));
         pingThread.start();
@@ -258,10 +258,8 @@ public class ClientThread implements Runnable {
 
                         case "UPLOADFILE":
                             String username = splits[1];
-                            ClientThread client = null;
                             for (ClientThread ct : server.threads) {
                                 if (ct != this && username.equals(ct.username)) {
-                                    client = ct;
                                     fileServer = new ClientFileServerThread(ct);
                                     Thread fileserverThread = new Thread(fileServer);
                                     fileserverThread.start();
@@ -270,20 +268,29 @@ public class ClientThread implements Runnable {
                             }
                             break;
 
+                        case "DOWNLOADFILE":
+                            String filename = splits[1];
+                            System.out.println(filename);
+                            fileServer = new ClientFileServerThread(filename);
+                            Thread fileserverThread = new Thread(fileServer);
+                            fileserverThread.start();
+                            break;
+
                         case "DONEFILE":
                             fileServer.kill();
+                            break;
+
                         default:
                             System.out.println();
                             System.out.println("UNKOWN: " + line);
                             break;
                     }
                 }
-            } catch (IOException e) {
+            } catch (Exception e) {
                 e.getStackTrace();
-//                break;
             }
         }
-//        kill(pingThread);
+        kill(pingThread);
     }
 
     private void sendDM(String sender, String message) {

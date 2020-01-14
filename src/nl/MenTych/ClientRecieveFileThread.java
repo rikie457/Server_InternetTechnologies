@@ -3,7 +3,7 @@ package nl.MenTych;
 import java.io.*;
 import java.net.Socket;
 
-public class ClientRecieveFileThread {
+public class ClientRecieveFileThread implements Runnable {
 
     private Socket socket;
     private File file;
@@ -22,7 +22,7 @@ public class ClientRecieveFileThread {
     }
 
 
-    File recieveFile(ClientThread reciever) {
+    void recieveFile(ClientThread reciever) {
         try {
             util.send("FILERECIEVEREADY");
             int bytesRead;
@@ -45,26 +45,22 @@ public class ClientRecieveFileThread {
 
             //Notify Client 2
             Util recieverUtil = new Util(reciever.out);
-            recieverUtil.send("+OK RECIEVEFILE");
-
-            return new File("files/" + fileName);
+            recieverUtil.send("+OK RECIEVEFILE " + fileName);
+            kill();
         } catch (IOException e) {
             e.getStackTrace();
         }
-        return null;
     }
 
-    public File getFile() {
-        return file;
-    }
 
-    void kill() {
+    void kill() throws IOException {
+        socket.close();
         System.out.println("KILLING CLIENTFILETHREAD");
         Thread.currentThread().stop();
     }
 
-//    @Override
-//    public void run() {
-//            this.file = recieveFile(this.reciever);
-//    }
+    @Override
+    public void run() {
+        recieveFile(this.reciever);
+    }
 }

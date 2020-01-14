@@ -3,10 +3,10 @@ package nl.MenTych;
 import java.io.*;
 import java.net.Socket;
 
-public class ClientSentFileThread {
+public class ClientSentFileThread implements Runnable {
 
     private Socket socket;
-    private File file;
+    private String filePath;
     private Util util;
 
 
@@ -21,7 +21,7 @@ public class ClientSentFileThread {
     }
 
 
-    void sendFile(File file) {
+    void sendFile() {
         try {
             util.send("FILESENDREADY");
             boolean ready = false;
@@ -32,7 +32,7 @@ public class ClientSentFileThread {
                     ready = true;
                 }
             }
-
+            File file = new File(filePath);
             byte[] mybytearray = new byte[(int) file.length()];
             FileInputStream fis = new FileInputStream(file);
             DataInputStream dis = new DataInputStream(fis);
@@ -48,22 +48,25 @@ public class ClientSentFileThread {
             dos.writeLong(mybytearray.length);
             dos.write(mybytearray, 0, mybytearray.length);
             dos.flush();
+            kill();
         } catch (IOException e) {
             e.getStackTrace();
         }
     }
 
-    public void setFile(File file) {
-        this.file = file;
-    }
 
     void kill() {
-        System.out.println("KILLING CLIENTFILETHREAD");
+        try {
+            socket.close();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        System.out.println("KILLING CLIENTFILESENDTHREAD");
         Thread.currentThread().stop();
     }
 
-//    @Override
-//    public void run() {
-//            sendFile(this.file);
-//    }
+    @Override
+    public void run() {
+        sendFile();
+    }
 }
