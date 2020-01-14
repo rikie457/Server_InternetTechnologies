@@ -10,7 +10,7 @@ public class Server implements Runnable {
     public ArrayList<ClientThread> threads;
     public ArrayList<Group> groups = new ArrayList<>();
 
-    private static final int PORT = 1337;
+    static final int PORT = 1337;
 
     public Server() {
         this.threads = new ArrayList<>();
@@ -36,7 +36,7 @@ public class Server implements Runnable {
     public void sendMessageButNotToSender(ClientThread sender, int group, String message) {
         for (ClientThread thread : threads) {
             if (thread != sender && thread.activegroup == group) {
-                thread.send(message);
+                thread.util.send(message);
             }
         }
     }
@@ -53,7 +53,7 @@ public class Server implements Runnable {
     public void sendMessageToAll(int group, String message) {
         for (ClientThread thread : threads) {
             if(thread.activegroup == group) {
-                thread.send(message);
+                thread.util.send(message);
             }
         }
     }
