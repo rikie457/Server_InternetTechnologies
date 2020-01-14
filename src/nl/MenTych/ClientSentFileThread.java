@@ -26,7 +26,7 @@ public class ClientSentFileThread implements Runnable {
             util.send("FILESENDREADY");
             boolean ready = false;
             DataInputStream in = new DataInputStream(socket.getInputStream());
-
+            System.out.println("PORT: " + socket.getLocalPort());
             while (!ready) {
                 if (in.readUTF().equals("FILESENDREADY")) {
                     ready = true;
@@ -50,7 +50,7 @@ public class ClientSentFileThread implements Runnable {
             dos.flush();
             kill();
         } catch (IOException e) {
-            e.getStackTrace();
+            e.printStackTrace();
         }
     }
 

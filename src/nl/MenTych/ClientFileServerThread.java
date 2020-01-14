@@ -33,35 +33,28 @@ public class ClientFileServerThread implements Runnable {
                 Socket socket = serverSocket.accept();
                 System.out.println("CONNECTED WITH NEW CLIENT");
                 try {
-
+                    System.out.println("PORT: " + socket.getLocalPort());
                     if (reciever != null) {
                         clientRecieveThread = new ClientRecieveFileThread(socket, reciever);
                         System.out.println("CREATING RECIEVER FROM CLIENT");
                         Thread t2 = new Thread(clientRecieveThread);
                         t2.start();
                     } else if (filename != null) {
-
                         clientSentFileThread = new ClientSentFileThread(socket);
                         System.out.println("CREATING SENDER TO CLIENT");
                         Thread t2 = new Thread(clientRecieveThread);
                         t2.start();
                     }
                 } catch (Exception e) {
-                    System.out.println(e.getMessage());
+                    e.printStackTrace();
                 }
             }
         } catch (IOException e) {
-            System.out.println(e.getMessage());
-            kill();
+            e.printStackTrace();
         }
     }
 
     void kill() {
-        try {
-            serverSocket.close();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
         System.out.println("KILLING CLIENTFILESERVERTHREAD");
         Thread.currentThread().stop();
     }

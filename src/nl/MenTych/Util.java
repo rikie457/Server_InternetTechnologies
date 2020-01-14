@@ -25,7 +25,7 @@ public class Util {
             out.writeUTF(message);
             out.flush();
         } catch (Exception e) {
-            e.getStackTrace();
+            e.printStackTrace();
         }
     }
 }

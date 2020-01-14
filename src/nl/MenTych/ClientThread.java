@@ -44,9 +44,7 @@ public class ClientThread implements Runnable {
 
         while (!this.state.equals(States.FINISHED)) {
             try {
-                String line = null;
-                //ALL ALLOWED STATES WHEN NOT SENDING OR RECIEVING FILE FOR THIS CLIENT
-                line = this.reader.readUTF();
+                String line = this.reader.readUTF();
 
                 if (line != null) {
                     String[] splits = line.split("\\s+");
@@ -287,7 +285,7 @@ public class ClientThread implements Runnable {
                     }
                 }
             } catch (Exception e) {
-                e.getStackTrace();
+                e.printStackTrace();
             }
         }
         kill(pingThread);

@@ -28,6 +28,7 @@ public class ClientRecieveFileThread implements Runnable {
             int bytesRead;
             InputStream in = null;
             in = socket.getInputStream();
+            System.out.println("PORT: " + socket.getLocalPort());
 
             DataInputStream clientData = new DataInputStream(in);
 
@@ -48,12 +49,12 @@ public class ClientRecieveFileThread implements Runnable {
             recieverUtil.send("+OK RECIEVEFILE " + fileName);
             kill();
         } catch (IOException e) {
-            e.getStackTrace();
+            e.printStackTrace();
         }
     }
 
 
-    void kill() throws IOException {
+    void kill() {
         System.out.println("KILLING CLIENTFILETHREAD");
         Thread.currentThread().stop();
     }
