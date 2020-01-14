@@ -19,7 +19,7 @@ public class ClientThread implements Runnable {
     private Group group;
     Util util;
     int activegroup;
-    private ClientFileServerThread fileserver;
+    ClientFileServerThread fileServer;
 
     public ClientThread(Socket socket, Server server) {
         this.socket = socket;
@@ -257,31 +257,33 @@ public class ClientThread implements Runnable {
                             break;
 
                         case "UPLOADFILE":
-                            fileserver = new ClientFileServerThread();
-                            Thread fileserverThread = new Thread(fileserver);
-                            fileserverThread.start();
+                            String username = splits[1];
+                            ClientThread client = null;
+                            for (ClientThread ct : server.threads) {
+                                if (ct != this && username.equals(ct.username)) {
+                                    client = ct;
+                                    fileServer = new ClientFileServerThread(ct);
+                                    Thread fileserverThread = new Thread(fileServer);
+                                    fileserverThread.start();
+                                    break;
+                                }
+                            }
                             break;
 
-                        case "CANCELFILE":
-                            fileserver.kill();
-                            break;
-
-                        case "SUCESSFILE":
-                            fileserver.kill();
-                            break;
-
+                        case "DONEFILE":
+                            fileServer.kill();
                         default:
-                            System.out.println(line);
-                            System.out.println("UNKOWN!");
+                            System.out.println();
+                            System.out.println("UNKOWN: " + line);
                             break;
                     }
                 }
-            } catch (Exception e) {
-                e.printStackTrace();
-                break;
+            } catch (IOException e) {
+                e.getStackTrace();
+//                break;
             }
         }
-        kill(pingThread);
+//        kill(pingThread);
     }
 
     private void sendDM(String sender, String message) {
@@ -307,5 +309,9 @@ public class ClientThread implements Runnable {
 
     public String getUsername() {
         return username;
+    }
+
+    public Socket getSocket() {
+        return socket;
     }
 }
