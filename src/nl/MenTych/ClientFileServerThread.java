@@ -5,56 +5,60 @@ import java.net.ServerSocket;
 import java.net.Socket;
 
 public class ClientFileServerThread implements Runnable {
-    ClientSentFileThread clientSentFileThread;
-    ClientRecieveFileThread clientRecieveThread;
-    ClientThread reciever;
-    String filename;
-    ServerSocket serverSocket;
-    int connected = 0;
+    private ClientThread reciever;
+    private String filename;
+    private boolean stop;
+    private ServerSocket serverSocket;
+    private boolean sent = false;
 
-    public ClientFileServerThread(ClientThread reciever) {
+    public ClientFileServerThread(ClientThread reciever, String filename) {
         this.reciever = reciever;
-    }
-
-    public ClientFileServerThread(String filename) {
         this.filename = filename;
     }
 
     @Override
     public void run() {
         int PORT = Server.PORT + 1;
-        System.out.println(PORT);
         try {
             serverSocket = new ServerSocket(PORT);
-            System.out.println("Started filetransfer on port: " + PORT);
-            System.out.println(reciever);
-            System.out.println(filename);
-            while (true) {
-                Socket socket = serverSocket.accept();
-                System.out.println("CONNECTED WITH NEW CLIENT");
+            while (!this.stop) {
                 try {
-                    System.out.println("PORT: " + socket.getLocalPort());
-                    if (reciever != null) {
-                        clientRecieveThread = new ClientRecieveFileThread(socket, reciever);
+                    Socket socket = serverSocket.accept();
+                    if (!sent) {
+                        sent = true;
+                        ClientRecieveFileThread clientRecieveThread = new ClientRecieveFileThread(socket, reciever);
                         System.out.println("CREATING RECIEVER FROM CLIENT");
                         Thread t2 = new Thread(clientRecieveThread);
                         t2.start();
-                    } else if (filename != null) {
-                        clientSentFileThread = new ClientSentFileThread(socket);
+                    } else {
+                        ClientSentFileThread clientSentFileThread = new ClientSentFileThread(socket, "files/" + filename, this);
                         System.out.println("CREATING SENDER TO CLIENT");
-                        Thread t2 = new Thread(clientRecieveThread);
+                        Thread t2 = new Thread(clientSentFileThread);
                         t2.start();
                     }
                 } catch (Exception e) {
-                    e.printStackTrace();
+                   if(e.getMessage().equals("Interrupted function call: accept failed")){
+                       break;
+                   }else {
+                       e.printStackTrace();
+                   }
                 }
+
             }
+            //Just to make sure it stops
+            kill();
         } catch (IOException e) {
             e.printStackTrace();
         }
     }
 
     void kill() {
+        this.stop = true;
+        try {
+            this.serverSocket.close();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
         System.out.println("KILLING CLIENTFILESERVERTHREAD");
         Thread.currentThread().stop();
     }

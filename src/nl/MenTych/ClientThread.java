@@ -255,27 +255,16 @@ public class ClientThread implements Runnable {
                             break;
 
                         case "UPLOADFILE":
-                            String username = splits[1];
+                            String filename = splits[1];
+                            String username = splits[2];
                             for (ClientThread ct : server.threads) {
                                 if (ct != this && username.equals(ct.username)) {
-                                    fileServer = new ClientFileServerThread(ct);
+                                    fileServer = new ClientFileServerThread(ct, filename);
                                     Thread fileserverThread = new Thread(fileServer);
                                     fileserverThread.start();
                                     break;
                                 }
                             }
-                            break;
-
-                        case "DOWNLOADFILE":
-                            String filename = splits[1];
-                            System.out.println(filename);
-                            fileServer = new ClientFileServerThread(filename);
-                            Thread fileserverThread = new Thread(fileServer);
-                            fileserverThread.start();
-                            break;
-
-                        case "DONEFILE":
-                            fileServer.kill();
                             break;
 
                         default:
@@ -285,7 +274,7 @@ public class ClientThread implements Runnable {
                     }
                 }
             } catch (Exception e) {
-                e.printStackTrace();
+               break;
             }
         }
         kill(pingThread);
@@ -295,11 +284,9 @@ public class ClientThread implements Runnable {
         util.send("+DM" + ' ' + sender + ' ' + message);
     }
 
-    public void setGroup(Group group) {
-        this.group = group;
-    }
 
-    public void kill(Thread pt) {
+
+    private void kill(Thread pt) {
         try {
             pt.stop();
             System.out.println("DROPPED CONNECTION " + this.username);
@@ -312,11 +299,11 @@ public class ClientThread implements Runnable {
         this.state = States.FINISHED;
     }
 
-    public String getUsername() {
+    String getUsername() {
         return username;
     }
 
-    public Socket getSocket() {
-        return socket;
+    void setGroup(Group group) {
+        this.group = group;
     }
 }

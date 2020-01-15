@@ -6,7 +6,6 @@ import java.net.Socket;
 public class ClientRecieveFileThread implements Runnable {
 
     private Socket socket;
-    private File file;
     private Util util;
     private ClientThread reciever;
 
@@ -54,8 +53,9 @@ public class ClientRecieveFileThread implements Runnable {
     }
 
 
-    void kill() {
-        System.out.println("KILLING CLIENTFILETHREAD");
+    void kill() throws IOException {
+        socket.close();
+        System.out.println("KILLING CLIENTFILERECIEVETHREAD");
         Thread.currentThread().stop();
     }
 

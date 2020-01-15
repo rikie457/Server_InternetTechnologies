@@ -8,10 +8,13 @@ public class ClientSentFileThread implements Runnable {
     private Socket socket;
     private String filePath;
     private Util util;
+    private ClientFileServerThread server;
 
 
-    public ClientSentFileThread(Socket socket) {
+    public ClientSentFileThread(Socket socket, String filePath, ClientFileServerThread server) {
         this.socket = socket;
+        this.filePath = filePath;
+        this.server = server;
 
         try {
             this.util = new Util(new DataOutputStream(socket.getOutputStream()));
@@ -26,7 +29,6 @@ public class ClientSentFileThread implements Runnable {
             util.send("FILESENDREADY");
             boolean ready = false;
             DataInputStream in = new DataInputStream(socket.getInputStream());
-            System.out.println("PORT: " + socket.getLocalPort());
             while (!ready) {
                 if (in.readUTF().equals("FILESENDREADY")) {
                     ready = true;
@@ -48,6 +50,16 @@ public class ClientSentFileThread implements Runnable {
             dos.writeLong(mybytearray.length);
             dos.write(mybytearray, 0, mybytearray.length);
             dos.flush();
+            os.close();
+            System.out.println("FILE SEND DONE!");
+            if(file.delete())
+            {
+                System.out.println("Sent File deleted successfully");
+            }
+            else
+            {
+                System.out.println("Failed to delete the  sent file");
+            }
             kill();
         } catch (IOException e) {
             e.printStackTrace();
@@ -55,7 +67,9 @@ public class ClientSentFileThread implements Runnable {
     }
 
 
-    void kill() {
+    void kill() throws IOException {
+        socket.close();
+        this.server.kill();
         System.out.println("KILLING CLIENTFILESENDTHREAD");
         Thread.currentThread().stop();
     }
