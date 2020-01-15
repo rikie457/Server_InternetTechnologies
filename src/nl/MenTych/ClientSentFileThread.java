@@ -50,16 +50,9 @@ public class ClientSentFileThread implements Runnable {
             dos.writeLong(mybytearray.length);
             dos.write(mybytearray, 0, mybytearray.length);
             dos.flush();
+
             os.close();
-            System.out.println("FILE SEND DONE!");
-            if(file.delete())
-            {
-                System.out.println("Sent File deleted successfully");
-            }
-            else
-            {
-                System.out.println("Failed to delete the  sent file");
-            }
+
             kill();
         } catch (IOException e) {
             e.printStackTrace();
