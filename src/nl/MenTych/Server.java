@@ -1,5 +1,10 @@
 package nl.MenTych;
 
+import sun.security.ssl.SSLServerSocketFactoryImpl;
+
+import javax.net.ssl.SSLServerSocketFactory;
+import javax.net.ssl.SSLSocket;
+import javax.net.ssl.SSLSocketFactory;
 import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
@@ -19,6 +24,7 @@ public class Server implements Runnable {
 
     @Override
     public void run() {
+
         try (ServerSocket serverSocket = new ServerSocket(PORT)) {
             System.out.println("Listening for clients on port: " + PORT);
 

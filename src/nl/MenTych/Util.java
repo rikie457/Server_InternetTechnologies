@@ -1,6 +1,7 @@
 package nl.MenTych;
 
 import java.io.DataOutputStream;
+import java.util.Arrays;
 
 public class Util {
     private DataOutputStream out;
@@ -22,6 +23,19 @@ public class Util {
                 System.out.println(" SENDING " + message + " TO " + this.client.username);
             }
             out.writeUTF(message);
+            out.flush();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    public void sendBytes(byte[] message) {
+
+        try {
+            if (this.client != null) {
+                System.out.println(" SENDING bytes" + Arrays.toString(message) + " TO " + this.client.username);
+            }
+            out.write(message);
             out.flush();
         } catch (Exception e) {
             e.printStackTrace();
