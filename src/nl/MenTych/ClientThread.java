@@ -260,15 +260,9 @@ public class ClientThread implements Runnable {
                             }
                             if (removeexists) {
                                 if (grouptoremove.owner.equals(askinguser)) {
-                                    for (ClientThread ct : server.getThreads()) {
-                                        Group newgroup = server.getGroups().get(0);
-                                        if (ct.activegroup == indextoremove && ct != this) {
-                                            server.sendMessageToAll(activegroup, "+OK GROUPREMOVED");
-                                            ct.activegroup = 0;
-                                            ct.group = newgroup;
-                                        }
-                                    }
+                                    server.sendMessageButNotToSender(this, indextoremove, "+OK GROUPREMOVED");
                                     server.getGroups().remove(grouptoremove);
+                                    util.send("+OK GROUPLEAVE");
                                     this.activegroup = 0;
                                 } else {
                                     util.send("-ERR NOTOWNER");
@@ -292,7 +286,9 @@ public class ClientThread implements Runnable {
 
                             if (isgroup) {
                                 System.out.println(server.getGroups().size());
-                                server.getGroups().get(this.activegroup).removeMember(this);
+                                if (server.getGroups().size() > this.activegroup) {
+                                    server.getGroups().get(this.activegroup).removeMember(this);
+                                }
                                 this.group = server.getGroups().get(newindex);
                                 this.activegroup = newindex;
                                 this.group.addMember(this);
@@ -355,6 +351,7 @@ public class ClientThread implements Runnable {
                     }
                 }
             } catch (Exception e) {
+                e.printStackTrace();
                 break;
             }
         }
