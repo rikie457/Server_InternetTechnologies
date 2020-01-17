@@ -20,7 +20,9 @@ public class Util {
 
         try {
             if (this.client != null) {
-                System.out.println(" SENDING " + message + " TO " + this.client.username);
+                if (!message.contains("PING") && !message.contains("VERSION")) {
+                    System.out.println(" SENDING " + message + " TO " + this.client.username);
+                }
             }
             out.writeUTF(message);
             out.flush();
@@ -33,7 +35,7 @@ public class Util {
 
         try {
             if (this.client != null) {
-                System.out.println(" SENDING bytes" + Arrays.toString(message) + " TO " + this.client.username);
+                //System.out.println(" SENDING bytes" + Arrays.toString(message) + " TO " + this.client.username);
             }
             out.write(message);
             out.flush();

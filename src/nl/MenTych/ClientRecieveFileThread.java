@@ -33,6 +33,10 @@ public class ClientRecieveFileThread implements Runnable {
 
 
             String fileName = clientData.readUTF();
+
+            File file = new File("files");
+            boolean bool = file.mkdir();
+
             FileOutputStream output = new FileOutputStream("files/" + fileName);
 
             long size = clientData.readLong();
