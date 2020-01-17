@@ -7,8 +7,8 @@ import java.util.ArrayList;
 
 public class Server implements Runnable {
 
-    public ArrayList<ClientThread> threads;
-    public ArrayList<Group> groups = new ArrayList<>();
+    private ArrayList<ClientThread> threads;
+    private ArrayList<Group> groups = new ArrayList<>();
 
     static final int PORT = 1337;
 
@@ -36,15 +36,15 @@ public class Server implements Runnable {
 
     public void sendMessageButNotToSender(ClientThread sender, int group, String message) {
         for (ClientThread thread : threads) {
-            if (thread != sender && thread.activegroup == group) {
-                thread.util.send(message);
+            if (thread != sender && thread.getActivegroup() == group) {
+                thread.getUtil().send(message);
             }
         }
     }
 
     public ClientThread getClientThreadByName(String name) throws ClientNotFoundException {
         for (ClientThread t : threads) {
-            if (t.username.equals(name)) {
+            if (t.getUsername().equals(name)) {
                 return t;
             }
         }
@@ -53,9 +53,17 @@ public class Server implements Runnable {
 
     public void sendMessageToAll(int group, String message) {
         for (ClientThread thread : threads) {
-            if(thread.activegroup == group) {
-                thread.util.send(message);
+            if (thread.getActivegroup() == group) {
+                thread.getUtil().send(message);
             }
         }
+    }
+
+    public ArrayList<Group> getGroups() {
+        return groups;
+    }
+
+    public ArrayList<ClientThread> getThreads() {
+        return threads;
     }
 }

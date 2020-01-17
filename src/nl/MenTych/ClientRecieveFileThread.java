@@ -48,7 +48,7 @@ public class ClientRecieveFileThread implements Runnable {
             output.close();
 
             //Notify Client 2
-            Util recieverUtil = new Util(reciever.out);
+            Util recieverUtil = new Util(reciever.getOut());
             recieverUtil.send("+OK RECIEVEFILE " + fileName);
             kill();
         } catch (IOException e) {

@@ -7,17 +7,16 @@ import java.util.Arrays;
 
 public class ClientThread implements Runnable {
 
-    Socket socket;
-    DataOutputStream out;
-    DataInputStream reader;
-    String username;
+    private Socket socket;
+    private DataOutputStream out;
+    private DataInputStream reader;
+    private String username;
     private Server server;
-    States state;
-    boolean pongRecieved = true;
+    private States state;
+    private boolean pongRecieved = true;
     private Group group;
-    Util util;
-    int activegroup;
-    ClientFileServerThread fileServer;
+    private Util util;
+    private int activegroup;
 
     public ClientThread(Socket socket, Server server) {
         this.socket = socket;
@@ -68,7 +67,7 @@ public class ClientThread implements Runnable {
         try {
             pt.stop();
             System.out.println("DROPPED CONNECTION " + this.username);
-            server.threads.remove(this);
+            server.getThreads().remove(this);
             this.group.removeMember(this);
             this.socket.close();
         } catch (Exception ex) {
@@ -103,8 +102,7 @@ public class ClientThread implements Runnable {
 
                 if (line != null) {
                     String[] splits = line.split("\\s+");
-                    System.out.println("\n" + line + "\n");
-//                    System.out.println("\n" + splits[0] + "\n");
+                    System.out.println(splits[0]);
 
                     switch (splits[0]) {
                         // New user connects
@@ -120,7 +118,7 @@ public class ClientThread implements Runnable {
 
                             boolean userexists = false;
 
-                            for (ClientThread ct : server.threads) {
+                            for (ClientThread ct : server.getThreads()) {
                                 if (ct != this && username.equals(ct.username)) {
                                     userexists = true;
                                     break;
@@ -132,7 +130,7 @@ public class ClientThread implements Runnable {
                                 util.send("-ERR user already logged in");
                                 continue;
                             }
-                            this.group = server.groups.get(0);
+                            this.group = server.getGroups().get(0);
                             this.group.addMember(this);
 
                             util.send("+OK HELO " + username);
@@ -177,7 +175,7 @@ public class ClientThread implements Runnable {
                         // user sends message
                         case "BCST":
                             if (line.length() > 0) {
-                                for (ClientThread ct : server.threads) {
+                                for (ClientThread ct : server.getThreads()) {
                                     if (ct == this) {
                                         server.sendMessageButNotToSender(this, activegroup, "BCST [" + username + "] " + line.replaceAll("BCST ", ""));
                                     }
@@ -207,26 +205,27 @@ public class ClientThread implements Runnable {
                             String name = splits[2];
                             boolean exists = false;
 
-                            for (int i = 0; i < server.groups.size(); i++) {
-                                Group g = server.groups.get(i);
+                            for (int i = 0; i < server.getGroups().size(); i++) {
+                                Group g = server.getGroups().get(i);
                                 if (g.name.equals(name)) {
                                     exists = true;
                                 }
                             }
                             if (!exists) {
                                 Group group = new Group(name, owner);
-                                server.groups.add(group);
-                                for (int i = 0; i < server.groups.size(); i++) {
-                                    Group g = server.groups.get(i);
+                                server.getGroups().add(group);
+                                for (int i = 0; i < server.getGroups().size(); i++) {
+                                    Group g = server.getGroups().get(i);
                                     if (g.name.equals(name)) {
                                         this.activegroup = i;
                                     }
                                 }
-                                server.groups.get(0).removeMember(this);
+                                server.getGroups().get(0).removeMember(this);
                                 group.addMember(this);
+                                System.out.println(server.getGroups().size());
                                 util.send("+OK GROUPCREATE " + group.name);
                             } else {
-                                util.send("-ERR GROUPEXISTS");
+                                util.send("-ERR NOSUCHGROUP");
                             }
                             break;
 
@@ -251,8 +250,8 @@ public class ClientThread implements Runnable {
                             int indextoremove = 0;
                             Group grouptoremove = null;
 
-                            for (int i = 0; i < server.groups.size(); i++) {
-                                Group g = server.groups.get(i);
+                            for (int i = 0; i < server.getGroups().size(); i++) {
+                                Group g = server.getGroups().get(i);
                                 if (g.name.equals(remove)) {
                                     removeexists = true;
                                     grouptoremove = g;
@@ -261,22 +260,21 @@ public class ClientThread implements Runnable {
                             }
                             if (removeexists) {
                                 if (grouptoremove.owner.equals(askinguser)) {
-                                    for (ClientThread ct : server.threads) {
-                                        Group newgroup = server.groups.get(0);
-                                        System.out.println(activegroup);
-                                        System.out.println(indextoremove);
+                                    for (ClientThread ct : server.getThreads()) {
+                                        Group newgroup = server.getGroups().get(0);
                                         if (ct.activegroup == indextoremove && ct != this) {
                                             server.sendMessageToAll(activegroup, "+OK GROUPREMOVED");
                                             ct.activegroup = 0;
                                             ct.group = newgroup;
                                         }
                                     }
-                                    server.groups.remove(grouptoremove);
+                                    server.getGroups().remove(grouptoremove);
+                                    this.activegroup = 0;
                                 } else {
                                     util.send("-ERR NOTOWNER");
                                 }
                             } else {
-                                util.send("-ERR GROUPEXISTS");
+                                util.send("-ERR NOSUCHGROUP");
                             }
                             break;
 
@@ -284,8 +282,8 @@ public class ClientThread implements Runnable {
                             String groupname = splits[1];
                             int newindex = 0;
                             boolean isgroup = false;
-                            for (int i = 0; i < server.groups.size(); i++) {
-                                Group g = server.groups.get(i);
+                            for (int i = 0; i < server.getGroups().size(); i++) {
+                                Group g = server.getGroups().get(i);
                                 if (g.name.equals(groupname)) {
                                     isgroup = true;
                                     newindex = i;
@@ -293,8 +291,9 @@ public class ClientThread implements Runnable {
                             }
 
                             if (isgroup) {
-                                server.groups.get(this.activegroup).removeMember(this);
-                                this.group = server.groups.get(newindex);
+                                System.out.println(server.getGroups().size());
+                                server.getGroups().get(this.activegroup).removeMember(this);
+                                this.group = server.getGroups().get(newindex);
                                 this.activegroup = newindex;
                                 this.group.addMember(this);
                                 util.send("+OK GROUPJOIN " + groupname);
@@ -302,21 +301,22 @@ public class ClientThread implements Runnable {
                                 util.send("-ERR NOSUCHGROUP");
                             }
                             break;
+
                         case "QUIT":
                             util.send("+OK Goodbye");
                             pingThread.stop();
                             socket.close();
                             System.out.println("User disconnected: " + this.username);
-                            this.server.threads.remove(this);
+                            this.server.getThreads().remove(this);
                             this.group.removeMember(this);
                             break;
 
                         case "UPLOADFILE":
                             String filename = splits[1];
                             String username = splits[2];
-                            for (ClientThread ct : server.threads) {
+                            for (ClientThread ct : server.getThreads()) {
                                 if (ct != this && username.equals(ct.username)) {
-                                    fileServer = new ClientFileServerThread(ct, filename, this);
+                                    ClientFileServerThread fileServer = new ClientFileServerThread(ct, filename, this);
                                     Thread fileserverThread = new Thread(fileServer);
                                     fileserverThread.start();
                                     break;
@@ -363,5 +363,29 @@ public class ClientThread implements Runnable {
 
     void setGroup(Group group) {
         this.group = group;
+    }
+
+    public DataOutputStream getOut() {
+        return out;
+    }
+
+    public Socket getSocket() {
+        return socket;
+    }
+
+    public void setPongRecieved(boolean pongRecieved) {
+        this.pongRecieved = pongRecieved;
+    }
+
+    public boolean hasPongRecieved() {
+        return pongRecieved;
+    }
+
+    public int getActivegroup() {
+        return activegroup;
+    }
+
+    public Util getUtil() {
+        return util;
     }
 }

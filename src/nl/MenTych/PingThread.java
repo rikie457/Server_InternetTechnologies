@@ -12,7 +12,7 @@ public class PingThread implements Runnable {
     public PingThread(ClientThread ct, Util util) {
         this.ct = ct;
         this.util = util;
-        out = ct.out;
+        out = ct.getOut();
     }
 
     @Override
@@ -22,15 +22,15 @@ public class PingThread implements Runnable {
                 Thread.sleep(2000);
                 util.send("PING");
                 Thread.sleep(3000);
-                if (!ct.pongRecieved) {
+                if (!ct.hasPongRecieved()) {
                     util.send("DSCN Pong timeout");
-                    this.ct.socket.close();
+                    this.ct.getSocket().close();
                 }
             } catch (InterruptedException | IOException e) {
                 e.printStackTrace();
             }
 
-            ct.pongRecieved = false;
+            ct.setPongRecieved(false);
         }
     }
 }

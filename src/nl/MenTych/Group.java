@@ -4,7 +4,6 @@ import java.util.ArrayList;
 
 public class Group {
     public String name, owner;
-
     private ArrayList<ClientThread> members = new ArrayList<>();
 
     public Group(String name, String owner) {
