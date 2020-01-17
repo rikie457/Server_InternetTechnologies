@@ -65,7 +65,9 @@ public class ClientThread implements Runnable {
 
     private void kill(Thread pt) {
         try {
-            pt.stop();
+            if (pt != null) {
+                pt.stop();
+            }
             System.out.println("DROPPED CONNECTION " + this.username);
             server.getThreads().remove(this);
             this.group.removeMember(this);
@@ -89,7 +91,7 @@ public class ClientThread implements Runnable {
             out = new DataOutputStream(socket.getOutputStream());
             reader = new DataInputStream(input);
         } catch (IOException e) {
-            e.printStackTrace();
+            kill(null);
         }
         this.util = new Util(out, this);
         util.send("HELO Welkom to WhatsUpp!");
@@ -100,263 +102,261 @@ public class ClientThread implements Runnable {
             try {
                 String line = this.reader.readUTF();
 
-                if (line != null) {
-                    String[] splits = line.split("\\s+");
-                    System.out.println(splits[0]);
+                String[] splits = line.split("\\s+");
+                System.out.println(splits[0]);
 
-                    switch (splits[0]) {
-                        // New user connects
-                        case "HELO":
-                            username = splits[1];
-                            boolean validname = username.matches("[a-zA-Z0-9_]{3,14}");
+                switch (splits[0]) {
+                    // New user connects
+                    case "HELO":
+                        username = splits[1];
+                        boolean validname = username.matches("[a-zA-Z0-9_]{3,14}");
 
-                            if (!validname) {
-                                this.state = States.FINISHED;
-                                util.send("-ERR username has an invalid format (only characters, numbers and underscores are allowed");
-                                continue;
+                        if (!validname) {
+                            this.state = States.FINISHED;
+                            util.send("-ERR username has an invalid format (only characters, numbers and underscores are allowed");
+                            continue;
+                        }
+
+                        boolean userexists = false;
+
+                        for (ClientThread ct : server.getThreads()) {
+                            if (ct != this && username.equals(ct.username)) {
+                                userexists = true;
+                                break;
+                            }
+                        }
+
+                        if (userexists) {
+                            this.state = States.FINISHED;
+                            util.send("-ERR user already logged in");
+                            continue;
+                        }
+                        this.group = server.getGroups().get(0);
+                        this.group.addMember(this);
+
+                        util.send("+OK HELO " + username);
+                        util.send("+OK GROUPJOIN " + this.group.name);
+                        this.state = States.CONNECTED;
+                        break;
+
+                    case "VERSION":
+                        util.send("+VERSION 2");
+                        break;
+
+                    case "DM":
+                        // splits 0 to 2 are used for identifying.
+                        // 0 = DM identifier
+                        // 1 = reciever username
+                        // 2 = sender username
+                        System.out.println(Arrays.toString(splits));
+
+                        try {
+                            ClientThread reciever = this.server.getClientThreadByName(splits[1]);
+                            String sender = splits[2];
+
+                            StringBuilder message = new StringBuilder();
+                            for (int i = 3; i < splits.length; i++) {
+                                message.append(splits[i]);
+                                message.append(" ");
                             }
 
-                            boolean userexists = false;
+                            reciever.sendDM(sender, message.toString());
 
+                        } catch (ClientNotFoundException e) {
+                            e.printStackTrace();
+                        }
+
+                        break;
+
+                    // User responded with pong.
+                    case "PONG":
+                        this.pongRecieved = true;
+                        break;
+
+                    // user sends message
+                    case "BCST":
+                        if (line.length() > 0) {
                             for (ClientThread ct : server.getThreads()) {
-                                if (ct != this && username.equals(ct.username)) {
-                                    userexists = true;
-                                    break;
-                                }
-                            }
-
-                            if (userexists) {
-                                this.state = States.FINISHED;
-                                util.send("-ERR user already logged in");
-                                continue;
-                            }
-                            this.group = server.getGroups().get(0);
-                            this.group.addMember(this);
-
-                            util.send("+OK HELO " + username);
-                            util.send("+OK GROUPJOIN " + this.group.name);
-                            this.state = States.CONNECTED;
-                            break;
-
-                        case "VERSION":
-                            util.send("+VERSION 2");
-                            break;
-
-                        case "DM":
-                            // splits 0 to 2 are used for identifying.
-                            // 0 = DM identifier
-                            // 1 = reciever username
-                            // 2 = sender username
-                            System.out.println(Arrays.toString(splits));
-
-                            try {
-                                ClientThread reciever = this.server.getClientThreadByName(splits[1]);
-                                String sender = splits[2];
-
-                                StringBuilder message = new StringBuilder();
-                                for (int i = 3; i < splits.length; i++) {
-                                    message.append(splits[i]);
-                                    message.append(" ");
+                                if (ct == this) {
+                                    server.sendMessageButNotToSender(this, activegroup, "BCST [" + username + "] " + line.replaceAll("BCST ", ""));
                                 }
 
-                                reciever.sendDM(sender, message.toString());
-
-                            } catch (ClientNotFoundException e) {
-                                e.printStackTrace();
                             }
+                            util.send("+OK " + line);
+                        }
+                        break;
 
-                            break;
+                    case "CLIENTLIST":
+                        System.out.println(group.getConnectedUsernames());
+                        util.send("+OK CLIENTLIST " + group.getConnectedUsernames());
+                        break;
 
-                        // User responded with pong.
-                        case "PONG":
-                            this.pongRecieved = true;
-                            break;
+                    case "CLIENTLIST-DM":
+                        System.out.println(group.getConnectedUsernames());
+                        util.send("+OK CLIENTLIST-DM " + group.getConnectedUsernames());
+                        break;
 
-                        // user sends message
-                        case "BCST":
-                            if (line.length() > 0) {
-                                for (ClientThread ct : server.getThreads()) {
-                                    if (ct == this) {
-                                        server.sendMessageButNotToSender(this, activegroup, "BCST [" + username + "] " + line.replaceAll("BCST ", ""));
-                                    }
+                    case "CLIENTLIST-GROUP":
+                        System.out.println(group.getConnectedUsernames());
+                        util.send("+OK CLIENTLIST-GROUP " + group.getConnectedUsernames());
+                        break;
 
-                                }
-                                util.send("+OK " + line);
+                    case "GROUPCREATE":
+                        String owner = splits[1];
+                        String name = splits[2];
+                        boolean exists = false;
+
+                        for (int i = 0; i < server.getGroups().size(); i++) {
+                            Group g = server.getGroups().get(i);
+                            if (g.name.equals(name)) {
+                                exists = true;
                             }
-                            break;
-
-                        case "CLIENTLIST":
-                            System.out.println(group.getConnectedUsernames());
-                            util.send("+OK CLIENTLIST " + group.getConnectedUsernames());
-                            break;
-
-                        case "CLIENTLIST-DM":
-                            System.out.println(group.getConnectedUsernames());
-                            util.send("+OK CLIENTLIST-DM " + group.getConnectedUsernames());
-                            break;
-
-                        case "CLIENTLIST-GROUP":
-                            System.out.println(group.getConnectedUsernames());
-                            util.send("+OK CLIENTLIST-GROUP " + group.getConnectedUsernames());
-                            break;
-
-                        case "GROUPCREATE":
-                            String owner = splits[1];
-                            String name = splits[2];
-                            boolean exists = false;
-
+                        }
+                        if (!exists) {
+                            Group group = new Group(name, owner);
+                            server.getGroups().add(group);
                             for (int i = 0; i < server.getGroups().size(); i++) {
                                 Group g = server.getGroups().get(i);
                                 if (g.name.equals(name)) {
-                                    exists = true;
+                                    this.activegroup = i;
                                 }
                             }
-                            if (!exists) {
-                                Group group = new Group(name, owner);
-                                server.getGroups().add(group);
-                                for (int i = 0; i < server.getGroups().size(); i++) {
-                                    Group g = server.getGroups().get(i);
-                                    if (g.name.equals(name)) {
-                                        this.activegroup = i;
-                                    }
-                                }
-                                server.getGroups().get(0).removeMember(this);
-                                group.addMember(this);
-                                System.out.println(server.getGroups().size());
-                                util.send("+OK GROUPCREATE " + group.name);
+                            server.getGroups().get(0).removeMember(this);
+                            group.addMember(this);
+                            System.out.println(server.getGroups().size());
+                            util.send("+OK GROUPCREATE " + group.name);
+                        } else {
+                            util.send("-ERR NOSUCHGROUP");
+                        }
+                        break;
+
+                    case "KICK":
+                        try {
+                            this.group.removeMember(this.server.getClientThreadByName(splits[1]));
+                            this.server.getClientThreadByName(splits[1]).util.send("+OK GROUPKICK");
+                        } catch (ClientNotFoundException e) {
+                            e.printStackTrace();
+                        }
+                        break;
+
+                    case "LEAVEGROUP":
+                        this.group.removeMember(this);
+                        util.send("+OK GROUPLEAVE");
+                        break;
+
+                    case "GROUPREMOVE":
+                        String remove = splits[1];
+                        String askinguser = splits[2];
+                        boolean removeexists = false;
+                        int indextoremove = 0;
+                        Group grouptoremove = null;
+
+                        for (int i = 0; i < server.getGroups().size(); i++) {
+                            Group g = server.getGroups().get(i);
+                            if (g.name.equals(remove)) {
+                                removeexists = true;
+                                grouptoremove = g;
+                                indextoremove = i;
+                            }
+                        }
+                        if (removeexists) {
+                            if (grouptoremove.owner.equals(askinguser)) {
+                                server.sendMessageButNotToSender(this, indextoremove, "+OK GROUPREMOVED");
+                                server.getGroups().remove(grouptoremove);
+                                util.send("+OK GROUPLEAVE");
+                                this.activegroup = 0;
                             } else {
-                                util.send("-ERR NOSUCHGROUP");
+                                util.send("-ERR NOTOWNER");
                             }
-                            break;
+                        } else {
+                            util.send("-ERR NOSUCHGROUP");
+                        }
+                        break;
 
-                        case "KICK":
-                            try {
-                                this.group.removeMember(this.server.getClientThreadByName(splits[1]));
-                                this.server.getClientThreadByName(splits[1]).util.send("+OK GROUPKICK");
-                            } catch (ClientNotFoundException e) {
-                                e.printStackTrace();
+                    case "GROUPJOIN":
+                        String groupname = splits[1];
+                        int newindex = 0;
+                        boolean isgroup = false;
+                        for (int i = 0; i < server.getGroups().size(); i++) {
+                            Group g = server.getGroups().get(i);
+                            if (g.name.equals(groupname)) {
+                                isgroup = true;
+                                newindex = i;
                             }
-                            break;
+                        }
 
-                        case "LEAVEGROUP":
-                            this.group.removeMember(this);
-                            util.send("+OK GROUPLEAVE");
-                            break;
-
-                        case "GROUPREMOVE":
-                            String remove = splits[1];
-                            String askinguser = splits[2];
-                            boolean removeexists = false;
-                            int indextoremove = 0;
-                            Group grouptoremove = null;
-
-                            for (int i = 0; i < server.getGroups().size(); i++) {
-                                Group g = server.getGroups().get(i);
-                                if (g.name.equals(remove)) {
-                                    removeexists = true;
-                                    grouptoremove = g;
-                                    indextoremove = i;
-                                }
+                        if (isgroup) {
+                            System.out.println(server.getGroups().size());
+                            if (server.getGroups().size() > this.activegroup) {
+                                server.getGroups().get(this.activegroup).removeMember(this);
                             }
-                            if (removeexists) {
-                                if (grouptoremove.owner.equals(askinguser)) {
-                                    server.sendMessageButNotToSender(this, indextoremove, "+OK GROUPREMOVED");
-                                    server.getGroups().remove(grouptoremove);
-                                    util.send("+OK GROUPLEAVE");
-                                    this.activegroup = 0;
-                                } else {
-                                    util.send("-ERR NOTOWNER");
-                                }
-                            } else {
-                                util.send("-ERR NOSUCHGROUP");
+                            this.group = server.getGroups().get(newindex);
+                            this.activegroup = newindex;
+                            this.group.addMember(this);
+                            util.send("+OK GROUPJOIN " + groupname);
+                        } else {
+                            util.send("-ERR NOSUCHGROUP");
+                        }
+                        break;
+
+                    case "QUIT":
+                        util.send("+OK Goodbye");
+                        pingThread.stop();
+                        socket.close();
+                        System.out.println("User disconnected: " + this.username);
+                        this.server.getThreads().remove(this);
+                        this.group.removeMember(this);
+                        break;
+
+                    case "UPLOADFILE":
+                        String filename = splits[1];
+                        String username = splits[2];
+                        for (ClientThread ct : server.getThreads()) {
+                            if (ct != this && username.equals(ct.username)) {
+                                ClientFileServerThread fileServer = new ClientFileServerThread(ct, filename, this);
+                                Thread fileserverThread = new Thread(fileServer);
+                                fileserverThread.start();
+                                break;
                             }
-                            break;
+                        }
+                        break;
 
-                        case "GROUPJOIN":
-                            String groupname = splits[1];
-                            int newindex = 0;
-                            boolean isgroup = false;
-                            for (int i = 0; i < server.getGroups().size(); i++) {
-                                Group g = server.getGroups().get(i);
-                                if (g.name.equals(groupname)) {
-                                    isgroup = true;
-                                    newindex = i;
-                                }
+                    case "RECIEVEDFILE":
+                        File file = new File("files/" + splits[1]);
+                        MessageDigest md5Digest = MessageDigest.getInstance("MD5");
+                        String checksum = getFileChecksum(md5Digest, file);
+                        util.send("+OK CHECKSUM " + splits[1] + " " + checksum);
+                        break;
+
+                    case "+KEY":
+                        try {
+                            int bytesRead;
+                            byte[] buffer = new byte[1024];
+                            System.out.println("Reading bytes: ");
+                            while ((bytesRead = this.reader.read(buffer)) == -1) {
+                                System.out.print(bytesRead + " ");
                             }
 
-                            if (isgroup) {
-                                System.out.println(server.getGroups().size());
-                                if (server.getGroups().size() > this.activegroup) {
-                                    server.getGroups().get(this.activegroup).removeMember(this);
-                                }
-                                this.group = server.getGroups().get(newindex);
-                                this.activegroup = newindex;
-                                this.group.addMember(this);
-                                util.send("+OK GROUPJOIN " + groupname);
-                            } else {
-                                util.send("-ERR NOSUCHGROUP");
-                            }
-                            break;
+                            ClientThread reciever = this.server.getClientThreadByName(splits[2]);
+                            String sender = splits[3];
+                            reciever.sendKEY(sender, buffer);
+                        } catch (Exception e) {
+                            e.printStackTrace();
+                        }
+                        break;
 
-                        case "QUIT":
-                            util.send("+OK Goodbye");
-                            pingThread.stop();
-                            socket.close();
-                            System.out.println("User disconnected: " + this.username);
-                            this.server.getThreads().remove(this);
-                            this.group.removeMember(this);
-                            break;
-
-                        case "UPLOADFILE":
-                            String filename = splits[1];
-                            String username = splits[2];
-                            for (ClientThread ct : server.getThreads()) {
-                                if (ct != this && username.equals(ct.username)) {
-                                    ClientFileServerThread fileServer = new ClientFileServerThread(ct, filename, this);
-                                    Thread fileserverThread = new Thread(fileServer);
-                                    fileserverThread.start();
-                                    break;
-                                }
-                            }
-                            break;
-
-                        case "RECIEVEDFILE":
-                            File file = new File("files/" + splits[1]);
-                            MessageDigest md5Digest = MessageDigest.getInstance("MD5");
-                            String checksum = getFileChecksum(md5Digest, file);
-                            util.send("+OK CHECKSUM " + splits[1] + " " + checksum);
-                            break;
-
-                        case "+KEY":
-                            try {
-                                int bytesRead;
-                                byte[] buffer = new byte[1024];
-                                System.out.println("Reading bytes: ");
-                                while ((bytesRead = this.reader.read(buffer)) == -1) {
-                                    System.out.print(bytesRead + " ");
-                                }
-
-                                ClientThread reciever = this.server.getClientThreadByName(splits[2]);
-                                String sender = splits[3];
-                                reciever.sendKEY(sender, buffer);
-                            } catch (Exception e) {
-                                e.printStackTrace();
-                            }
-                            break;
-
-                        default:
-                            System.out.println();
-                            System.out.println("UNKNOWN: " + line);
-                            break;
-                    }
+                    default:
+                        System.out.println();
+                        System.out.println("UNKNOWN: " + line);
+                        break;
                 }
             } catch (Exception e) {
-                e.printStackTrace();
                 break;
             }
         }
         kill(pingThread);
     }
+
 
     void setGroup(Group group) {
         this.group = group;
