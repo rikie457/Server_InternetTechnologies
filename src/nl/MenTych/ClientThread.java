@@ -58,6 +58,10 @@ public class ClientThread implements Runnable {
         util.send("+DM" + ' ' + sender + ' ' + message);
     }
 
+    private void sendKEY(String sender, String message) {
+        util.send("+KEY PUBLIC" + ' ' + sender + ' ' + message);
+    }
+
 
     private void kill(Thread pt) {
         try {
@@ -98,7 +102,9 @@ public class ClientThread implements Runnable {
 
                 if (line != null) {
                     String[] splits = line.split("\\s+");
-                    System.out.println(line);
+                    System.out.println("\n" + line + "\n");
+                    System.out.println("\n" + splits[0] + "\n");
+
                     switch (splits[0]) {
                         // New user connects
                         case "HELO":
@@ -323,14 +329,36 @@ public class ClientThread implements Runnable {
                             String checksum = getFileChecksum(md5Digest, file);
                             util.send("+OK CHECKSUM " + splits[1] + " " + checksum);
                             break;
+
+                        case "+KEY":
+
+                            StringBuilder sb = new StringBuilder();
+                            for (int i = 4; i < splits.length; i++) {
+                                sb.append(splits[i]);
+                                sb.append(" ");
+                            }
+                            String publickey = sb.toString();
+
+                            try {
+                                ClientThread reciever = this.server.getClientThreadByName(splits[2]);
+                                String sender = splits[3];
+
+                                reciever.sendKEY(sender, publickey);
+
+                            } catch (ClientNotFoundException e) {
+                                e.printStackTrace();
+                            }
+
+                            break;
+
                         default:
                             System.out.println();
-                            System.out.println("UNKOWN: " + line);
+                            System.out.println("UNKNOWN: " + line);
                             break;
                     }
                 }
             } catch (Exception e) {
-               break;
+                break;
             }
         }
         kill(pingThread);

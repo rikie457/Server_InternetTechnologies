@@ -17,7 +17,6 @@ public class Util {
 
     public void send(String message) {
 
-
         try {
             if (this.client != null) {
                 System.out.println(" SENDING " + message + " TO " + this.client.username);
