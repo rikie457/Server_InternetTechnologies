@@ -29,11 +29,6 @@ public class ClientSentFileThread implements Runnable {
             util.send("FILESENDREADY");
             boolean ready = false;
             DataInputStream in = new DataInputStream(socket.getInputStream());
-            while (!ready) {
-                if (in.readUTF().equals("FILESENDREADY")) {
-                    ready = true;
-                }
-            }
             File file = new File(filePath);
             byte[] mybytearray = new byte[(int) file.length()];
             FileInputStream fis = new FileInputStream(file);

@@ -316,7 +316,6 @@ public class ClientThread implements Runnable {
                             String username = splits[2];
                             for (ClientThread ct : server.threads) {
                                 if (ct != this && username.equals(ct.username)) {
-                                    System.out.println("starting fs");
                                     fileServer = new ClientFileServerThread(ct, filename, this);
                                     Thread fileserverThread = new Thread(fileServer);
                                     fileserverThread.start();
@@ -333,10 +332,8 @@ public class ClientThread implements Runnable {
                             break;
 
                         case "+KEY":
-
                             try {
                                 int bytesRead;
-
                                 byte[] buffer = new byte[1024];
                                 System.out.println("Reading bytes: ");
                                 while ((bytesRead = this.reader.read(buffer)) == -1) {
@@ -349,25 +346,6 @@ public class ClientThread implements Runnable {
                             } catch (Exception e) {
                                 e.printStackTrace();
                             }
-
-
-//                            StringBuilder sb = new StringBuilder();
-//                            for (int i = 4; i < splits.length; i++) {
-//                                sb.append(splits[i]);
-//                                sb.append(" ");
-//                            }
-//                            String publickey = sb.toString();
-//
-//                            try {
-//                                ClientThread reciever = this.server.getClientThreadByName(splits[2]);
-//                                String sender = splits[3];
-//
-//                                reciever.sendKEY(sender, publickey);
-//
-//                            } catch (ClientNotFoundException e) {
-//                                e.printStackTrace();
-//                            }
-
                             break;
 
                         default:

@@ -25,8 +25,6 @@ public class ClientFileServerThread implements Runnable {
             serverSocket = new ServerSocket(PORT);
             while (!this.stop) {
                 try {
-                    Util util = new Util(sender.out);
-                    util.send("+OK FILESERVEREADY");
                     Socket socket = serverSocket.accept();
                     if (!sent) {
                         sent = true;
