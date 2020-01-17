@@ -1,10 +1,5 @@
 package nl.MenTych;
 
-import sun.security.ssl.SSLServerSocketFactoryImpl;
-
-import javax.net.ssl.SSLServerSocketFactory;
-import javax.net.ssl.SSLSocket;
-import javax.net.ssl.SSLSocketFactory;
 import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;

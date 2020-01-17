@@ -7,13 +7,15 @@ import java.net.Socket;
 public class ClientFileServerThread implements Runnable {
     private ClientThread reciever;
     private String filename;
+    private ClientThread sender;
     private boolean stop;
     private ServerSocket serverSocket;
     private boolean sent = false;
 
-    public ClientFileServerThread(ClientThread reciever, String filename) {
+    public ClientFileServerThread(ClientThread reciever, String filename, ClientThread sender) {
         this.reciever = reciever;
         this.filename = filename;
+        this.sender = sender;
     }
 
     @Override
@@ -23,6 +25,8 @@ public class ClientFileServerThread implements Runnable {
             serverSocket = new ServerSocket(PORT);
             while (!this.stop) {
                 try {
+                    Util util = new Util(sender.out);
+                    util.send("+OK FILESERVEREADY");
                     Socket socket = serverSocket.accept();
                     if (!sent) {
                         sent = true;

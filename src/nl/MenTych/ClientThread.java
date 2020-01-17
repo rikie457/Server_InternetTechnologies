@@ -317,7 +317,7 @@ public class ClientThread implements Runnable {
                             for (ClientThread ct : server.threads) {
                                 if (ct != this && username.equals(ct.username)) {
                                     System.out.println("starting fs");
-                                    fileServer = new ClientFileServerThread(ct, filename);
+                                    fileServer = new ClientFileServerThread(ct, filename, this);
                                     Thread fileserverThread = new Thread(fileServer);
                                     fileserverThread.start();
                                     break;
