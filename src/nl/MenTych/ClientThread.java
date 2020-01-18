@@ -230,6 +230,9 @@ public class ClientThread implements Runnable {
                         }
                         break;
 
+                    case "GROUPLIST":
+                        util.send("+OK GROUPLIST " + server.getGroupsAsString());
+                        break;
                     case "KICK":
                         try {
                             this.group.removeMember(this.server.getClientThreadByName(splits[1]));

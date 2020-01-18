@@ -51,12 +51,12 @@ public class Server implements Runnable {
         throw new ClientNotFoundException(name, this.threads);
     }
 
-    public void sendMessageToAll(int group, String message) {
-        for (ClientThread thread : threads) {
-            if (thread.getActivegroup() == group) {
-                thread.getUtil().send(message);
-            }
+    public String getGroupsAsString() {
+        StringBuilder groupsstring = new StringBuilder();
+        for (Group group : groups) {
+            groupsstring.append(group.name).append(",");
         }
+        return groupsstring.toString();
     }
 
     public ArrayList<Group> getGroups() {
