@@ -29,12 +29,10 @@ public class ClientFileServerThread implements Runnable {
                     if (!sent) {
                         sent = true;
                         ClientRecieveFileThread clientRecieveThread = new ClientRecieveFileThread(socket, reciever);
-                        System.out.println("CREATING RECIEVER FROM CLIENT");
                         Thread t2 = new Thread(clientRecieveThread);
                         t2.start();
                     } else {
                         ClientSentFileThread clientSentFileThread = new ClientSentFileThread(socket, "files/" + filename, this);
-                        System.out.println("CREATING SENDER TO CLIENT");
                         Thread t2 = new Thread(clientSentFileThread);
                         t2.start();
                     }

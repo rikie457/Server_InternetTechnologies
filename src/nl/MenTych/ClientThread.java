@@ -223,10 +223,9 @@ public class ClientThread implements Runnable {
                             }
                             server.getGroups().get(0).removeMember(this);
                             group.addMember(this);
-                            System.out.println(server.getGroups().size());
                             util.send("+OK GROUPCREATE " + group.name);
                         } else {
-                            util.send("-ERR NOSUCHGROUP");
+                            util.send("-ERR GROUPEXISTS");
                         }
                         break;
 
